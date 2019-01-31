@@ -13,10 +13,10 @@ import './App.css';
 const particlesOptions = {
   particles: {
     number: {
-      value: 200,
+      value: 100,
       density: {
         enable: true,
-        value_area: 800
+        value_area: 500
       }
     }
   }
@@ -25,7 +25,7 @@ const particlesOptions = {
 const initialState = {
   input: '',
   imageUrl: '',
-  box: {},
+  boxes: [],
   route: 'signin',
   isSignedIn: false,
   user: {
@@ -55,31 +55,32 @@ class App extends Component {
     });
   };
 
-  calculateFaceLocation = data => {
-    const clarifaiFace =
-      data.outputs[0].data.regions[0].region_info.bounding_box;
-    const image = document.getElementById('inputimage');
-    const width = Number(image.width);
-    const height = Number(image.height);
-    return {
-      leftCol: clarifaiFace.left_col * width,
-      topRow: clarifaiFace.top_row * height,
-      rightCol: width - clarifaiFace.right_col * width,
-      bottomRow: height - clarifaiFace.bottom_row * height
-    };
+  calculateFaceLocations = data => {
+    return data.outputs[0].data.regions.map(face => {
+      const clarifaiFace = face.region_info.bounding_box;
+      const image = document.getElementById('inputimage');
+      const width = Number(image.width);
+      const height = Number(image.height);
+      return {
+        leftCol: clarifaiFace.left_col * width,
+        topRow: clarifaiFace.top_row * height,
+        rightCol: width - clarifaiFace.right_col * width,
+        bottomRow: height - clarifaiFace.bottom_row * height
+      };
+    });
   };
 
-  displayFaceBox = box => {
-    this.setState({ box: box });
+  displayFaceBoxes = boxes => {
+    this.setState({ boxes: boxes });
   };
 
   onInputChange = event => {
     this.setState({ input: event.target.value });
   };
-
+  //aqueous-hamlet-30457.herokuapp.com:3000
   onButtonSubmit = () => {
     this.setState({ imageUrl: this.state.input });
-    fetch('https://aqueous-hamlet-30457.herokuapp.com:3000/imageurl', {
+    fetch('https://glacial-plains-92942.herokuapp.com/imageurl', {
       method: 'post',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -89,7 +90,7 @@ class App extends Component {
       .then(response => response.json())
       .then(response => {
         if (response) {
-          fetch('https://aqueous-hamlet-30457.herokuapp.com:3000/image', {
+          fetch('https://glacial-plains-92942.herokuapp.com/image', {
             method: 'put',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -98,11 +99,15 @@ class App extends Component {
           })
             .then(response => response.json())
             .then(count => {
-              this.setState(Object.assign(this.state.user, { entries: count }));
+              this.setState(
+                Object.assign(this.state.user, {
+                  entries: count
+                })
+              );
             })
             .catch(console.log);
         }
-        this.displayFaceBox(this.calculateFaceLocation(response));
+        this.displayFaceBoxes(this.calculateFaceLocations(response));
       })
       .catch(err => console.log(err));
   };
@@ -117,7 +122,7 @@ class App extends Component {
   };
 
   render() {
-    const { isSignedIn, imageUrl, route, box } = this.state;
+    const { isSignedIn, imageUrl, route, boxes } = this.state;
     return (
       <div className='App'>
         <Particles className='particles' params={particlesOptions} />
@@ -136,7 +141,7 @@ class App extends Component {
               onInputChange={this.onInputChange}
               onButtonSubmit={this.onButtonSubmit}
             />
-            <FaceRecognition box={box} imageUrl={imageUrl} />
+            <FaceRecognition boxes={boxes} imageUrl={imageUrl} />
           </div>
         ) : route === 'signin' ? (
           <Signin loadUser={this.loadUser} onRouteChange={this.onRouteChange} />
